@@ -35,8 +35,9 @@ const log = {
 };
 
 const app = express();
-const PORT = 3000;
-const leadsFilePath = path.join(process.cwd(), 'leads.json');
+const PORT = process.env.PORT || 3000;
+const __dirname = process.cwd();
+const leadsFilePath = path.join(__dirname, 'leads.json');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin_sunbabx_2026';
 
 // Middleware

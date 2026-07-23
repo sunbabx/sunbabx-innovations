@@ -413,7 +413,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
                     className="w-full p-3 bg-[#050b1a] border border-white/10 rounded-xl text-sm font-semibold text-white placeholder-white/20 focus:outline-hidden focus:border-cyan-500/50"
                   />
                   <p className="text-[10px] text-white/40 font-medium mt-1 text-left italic">
-                    Hint: Default is configured in .env as admin_sunbabx_2026
+                    
                   </p>
                 </div>
 
