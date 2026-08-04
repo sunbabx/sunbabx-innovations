@@ -61,6 +61,8 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
     publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '',
   });
 
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  console.log(`[SUNBABX DEBUG] API Base URL: ${apiBaseUrl}, EmailJS Config:`, emailjsConfig);
   const [showConfigHelper, setShowConfigHelper] = useState(false);
 
   const validate = () => {
@@ -114,7 +116,7 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
 
     try {
       logger.info('Step 1/2: Attempting secure server-side lead ingestion and email forwarding...', { endpoint: '/api/contact' });
-      const response = await fetch('/api/contact', {
+      const response = await fetch(`${apiBaseUrl}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -156,7 +158,7 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
 
     try {
       logger.info('Fetching live EmailJS configuration from secure server endpoint /api/config/emailjs...');
-      const configRes = await fetch('/api/config/emailjs');
+      const configRes = await fetch(`${apiBaseUrl}/api/config/emailjs`);
       if (configRes.ok) {
         const liveConfig = await configRes.json();
         serviceId = liveConfig.serviceId;
@@ -228,7 +230,7 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
         if (!serverSuccess) {
           logger.info('Server was previously offline. Attempting post-send backup transmission to backend registry...');
           try {
-            const backupResponse = await fetch('/api/contact', {
+            const backupResponse = await fetch(`${apiBaseUrl}/api/contact`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ...formData, message: `[EmailJS Backup Dispatch] ${formData.message}` }),

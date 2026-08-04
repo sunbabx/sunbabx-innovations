@@ -22,6 +22,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
   const [mailStatus, setMailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [mailMessage, setMailMessage] = useState('');
   const [composerTab, setComposerTab] = useState<'edit' | 'preview'>('edit');
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
   const mailTemplates: Record<string, { subject: string; body: string }> = {
     blank: { subject: '', body: '' },
@@ -111,7 +112,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
     setMailMessage('');
 
     try {
-      const response = await fetch(`/api/admin/send-email?password=${encodeURIComponent(password)}`, {
+      const response = await fetch(`${apiBaseUrl}/api/admin/send-email?password=${encodeURIComponent(password)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +175,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/leads?password=${encodeURIComponent(pw)}`, {
+      const response = await fetch(`${apiBaseUrl}/api/leads?password=${encodeURIComponent(pw)}`, {
         headers: {
           'Authorization': `Bearer ${pw}`
         }
@@ -213,7 +214,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
   // Update lead status
   const updateLeadStatus = async (id: string, newStatus: 'new' | 'contacted' | 'resolved') => {
     try {
-      const response = await fetch(`/api/leads/${id}?password=${encodeURIComponent(password)}`, {
+      const response = await fetch(`${apiBaseUrl}/api/leads/${id}?password=${encodeURIComponent(password)}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -236,7 +237,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
   // Update lead notes
   const saveNotes = async (id: string) => {
     try {
-      const response = await fetch(`/api/leads/${id}?password=${encodeURIComponent(password)}`, {
+      const response = await fetch(`${apiBaseUrl}/api/leads/${id}?password=${encodeURIComponent(password)}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -263,7 +264,7 @@ export default function LeadDashboard({ refreshTrigger }: LeadDashboardProps) {
       return;
     }
     try {
-      const response = await fetch(`/api/leads/${id}?password=${encodeURIComponent(password)}`, {
+      const response = await fetch(`${apiBaseUrl}/api/leads/${id}?password=${encodeURIComponent(password)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${password}`
