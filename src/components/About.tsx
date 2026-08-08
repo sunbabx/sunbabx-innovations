@@ -4,25 +4,25 @@ import { motion } from 'motion/react';
 
 export default function About() {
   const values = [
-    {
-      title: 'Customer-Focused',
-      desc: 'We place user priorities at the core of our strategy, molding systems that meet authentic needs.',
-      icon: Users,
-      color: 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/10',
-    },
-    {
-      title: 'Reliable Systems',
-      desc: 'Our digital solutions are backed by high uptime, strict protocols, and solid code.',
-      icon: ShieldCheck,
-      color: 'text-orange-400 bg-orange-500/10 border border-orange-400/10',
-    },
-    {
-      title: 'Accessible & Efficient',
-      desc: 'Simplifying complex IT and retail integrations so they are accessible and impactful for everyone.',
-      icon: Target,
-      color: 'text-red-400 bg-red-500/10 border border-red-400/10',
-    },
-  ];
+  {
+    title: 'Security by Engineering',
+    desc: 'Every solution is engineered with security as a foundational principle, not an afterthought.',
+    icon: ShieldCheck,
+    color: 'text-cyan-400 bg-cyan-500/10 border border-cyan-400/10',
+  },
+  {
+    title: 'Innovation with AI',
+    desc: 'We leverage artificial intelligence to build smarter, adaptive, and resilient enterprise security solutions.',
+    icon: Eye,
+    color: 'text-blue-400 bg-blue-500/10 border border-blue-400/10',
+  },
+  {
+    title: 'Trusted Engineering',
+    desc: 'We develop enterprise-grade software and cybersecurity solutions designed for reliability, scalability, and long-term business growth.',
+    icon: Award,
+    color: 'text-emerald-400 bg-emerald-500/10 border border-emerald-400/10',
+  },
+];
 
   return (
     <section id="about" className="py-24 bg-[#050b1a]/60 border-y border-white/5 relative overflow-hidden">
@@ -41,17 +41,26 @@ export default function About() {
             </div>
             
             <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-white tracking-tight mb-6">
-              Empowering Individuals & Businesses in a Connected World
-            </h2>
+                 Engineering Secure Digital Solutions for the AI Era            </h2>
             
-            <div className="space-y-4 text-white/60 font-medium leading-relaxed">
-              <p>
-                At <strong className="text-cyan-400 font-extrabold">SUNBABX-INNOVATIONS</strong>, we are a technology-driven organization specializing in the delivery of digital solutions, reliable web stores, and a wide array of value-added integrations.
-              </p>
-              <p>
-                We are committed to bridging the gap between quality products and customers by designing solutions that are robust, accessible, and user-centric. In an increasingly connected global landscape, we serve as a trusted technical partner that simplifies digital operations and enhances everyday life.
-              </p>
-            </div>
+            <p>
+  At <strong className="text-cyan-400 font-extrabold">SUNBABX INNOVATIONS</strong>,
+  we are an Enterprise Software Engineering and Cybersecurity Engineering
+  company committed to building secure, intelligent, and scalable digital
+  solutions for organizations operating in an increasingly connected world.
+</p>
+
+<p>
+  Our expertise spans enterprise software engineering, cybersecurity,
+  fraud detection systems, secure payment gateway integration, cloud
+  infrastructure, API engineering, and AI-powered security platforms.
+</p>
+
+<p>
+  We believe security should never be an afterthought. Every solution we
+  engineer is designed with resilience, performance, and trust at its
+  foundation, enabling businesses to innovate with confidence.
+</p>
 
             {/* Quote block */}
             <div className="mt-8 p-6 bg-white/5 rounded-xl border border-white/10 shadow-inner relative backdrop-blur-md">
@@ -59,8 +68,7 @@ export default function About() {
                 Core Mission
               </span>
               <p className="text-sm font-semibold text-white/80 italic leading-relaxed pt-2">
-                "Our mission is to make digital services more accessible, efficient, and impactful, empowering our customers to operate and grow safely without structural limitations."
-              </p>
+"Secure by Engineering. Intelligent by Design. We engineer enterprise software and cybersecurity solutions that help organizations protect, innovate, and grow with confidence."              </p>
             </div>
           </div>
 
@@ -68,8 +76,7 @@ export default function About() {
           <div className="lg:col-span-6">
             <div className="space-y-6">
               <h3 className="text-[10px] font-extrabold text-white/40 uppercase tracking-[0.2em] mb-4 text-left">
-                Why SUNBABX-INNOVATIONS?
-              </h3>
+Why Organizations Choose SUNBABX              </h3>
 
               <div className="grid grid-cols-1 gap-6">
                 {values.map((value, idx) => {
@@ -97,19 +104,35 @@ export default function About() {
 
               {/* Achievements banner */}
               <div className="grid grid-cols-3 gap-4 bg-gradient-to-r from-cyan-950/40 to-blue-950/40 border border-white/10 p-6 rounded-xl text-white shadow-md text-center mt-8 backdrop-blur-md">
-                <div>
-                  <div className="text-2xl font-black font-display text-white">100%</div>
-                  <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Uptime SLA</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black font-display text-white">5k+</div>
-                  <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Vouchers Sold</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black font-display text-white">24/7</div>
-                  <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Monitoring</div>
-                </div>
-              </div>
+
+  <div>
+    <div className="text-2xl font-black font-display text-white">
+      Enterprise
+    </div>
+    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+      Software Engineering
+    </div>
+  </div>
+
+  <div>
+    <div className="text-2xl font-black font-display text-white">
+      AI
+    </div>
+    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+      Security
+    </div>
+  </div>
+
+  <div>
+    <div className="text-2xl font-black font-display text-white">
+      24/7
+    </div>
+    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+      Cyber Monitoring
+    </div>
+  </div>
+
+</div>
 
             </div>
           </div>

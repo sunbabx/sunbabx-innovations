@@ -1,12 +1,28 @@
 /// <reference types="vite/client" />
 import React, { useState } from 'react';
-import { Send, CheckCircle, Mail, Phone, MapPin, Sparkles, Server, Cpu, Globe, Info, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Send,
+  CheckCircle,
+  Mail,
+  Phone,
+  MapPin,
+  Sparkles,
+  ShieldCheck,
+  BrainCircuit,
+  Cloud,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import emailjs from '@emailjs/browser';
+
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface ContactFormProps {
   onLeadAdded?: () => void;
 }
+
+
 
 // Custom client-side logging utility styled for senior developer diagnostics
 const logger = {
@@ -54,34 +70,27 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
     details?: string;
   } | null>(null);
 
-  // EmailJS configuration values for editing/testing
-  const [emailjsConfig, setEmailjsConfig] = useState({
-    serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || '',
-    templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '',
-    publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '',
-  });
-
-  const [showConfigHelper, setShowConfigHelper] = useState(false);
-
   const validate = () => {
-    const tempErrors: Record<string, string> = {};
-    if (!formData.name.trim()) tempErrors.name = 'Full name is required';
-    else if (formData.name.trim().length < 2) tempErrors.name = 'Name must be at least 2 characters';
+  const tempErrors: Record<string, string> = {};
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) tempErrors.email = 'Email address is required';
-    else if (!emailRegex.test(formData.email.trim())) tempErrors.email = 'Invalid email address';
+  if (!formData.name.trim())
+    tempErrors.name = "Full name is required";
 
-    if (formData.phone.trim() && !/^[+0-9\s-]{6,20}$/.test(formData.phone.trim())) {
-      tempErrors.phone = 'Invalid phone number format';
-    }
+  if (!formData.email.trim()) {
+    tempErrors.email = "Email is required";
+} else if (
+    !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)
+) {
+    tempErrors.email = "Invalid email address";
+}
 
-    if (!formData.message.trim()) tempErrors.message = 'Inquiry message is required';
-    else if (formData.message.trim().length < 10) tempErrors.message = 'Message must be at least 10 characters';
+  if (!formData.message.trim())
+    tempErrors.message = "Message is required";
 
-    setErrors(tempErrors);
-    return Object.keys(tempErrors).length === 0;
-  };
+  setErrors(tempErrors);
+
+  return Object.keys(tempErrors).length === 0;
+};
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -96,185 +105,93 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+) => {
+
     e.preventDefault();
-    logger.info('Contact inquiry submission triggered by client click.', { name: formData.name, email: formData.email, service: formData.service });
+
+    logger.info("Submitting contact form", formData);
 
     if (!validate()) {
-      logger.warn('Client-side form validation failed.', errors);
-      return;
+        logger.warn("Validation failed");
+        return;
     }
 
     setIsSubmitting(true);
     setSubmissionResult(null);
 
-    let serverSuccess = false;
-    let serverEmailSent = false;
-    let serverData: any = null;
-
     try {
-      logger.info('Step 1/2: Attempting secure server-side lead ingestion and email forwarding...', { endpoint: '/api/contact' });
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
 
-      if (response.ok) {
-        serverData = await response.json();
-        serverSuccess = true;
-        serverEmailSent = !!serverData.emailSent;
-        logger.info('Secure server successfully stored the lead.', { serverResponse: serverData });
-      } else {
-        const errorText = await response.text();
-        logger.warn('Secure server responded with a non-OK status. Dispatch failed.', { status: response.status, statusText: response.statusText, body: errorText });
-      }
-    } catch (err: any) {
-      logger.error('Secure server endpoint is unreachable or thrown exception.', err, { message: err?.message });
-    }
+        const response = await fetch(`${API_BASE_URL}/api/contact`, {
 
-    // If server succeeded and email was sent successfully, we are fully successful!
-    if (serverSuccess && serverEmailSent) {
-      logger.info('Successful path completed. Server recorded the lead AND dispatched the Microsoft Graph or SMTP email alert.');
-      setSubmissionResult({
-        success: true,
-        message: 'Message sent successfully!',
-        details: 'Thank you! Your message has been received and our team will get back to you shortly.',
-      });
-      setFormData({ name: '', email: '', phone: '', company: '', service: 'IT Solutions', message: '' });
-      if (onLeadAdded) onLeadAdded();
-      setIsSubmitting(false);
-      return;
-    }
+            method: "POST",
 
-    // Otherwise, transparently execute the Direct EmailJS fallback from the browser!
-    logger.warn('Server-side mail dispatch is pending or failed (SMTP/MS Graph credentials likely unconfigured). Initializing Step 2/2: Direct EmailJS fallback routing...');
+            headers: {
+                "Content-Type": "application/json",
+            },
 
-    let serviceId = '';
-    let templateId = '';
-    let publicKey = '';
+            body: JSON.stringify(formData),
 
-    try {
-      logger.info('Fetching live EmailJS configuration from secure server endpoint /api/config/emailjs...');
-      const configRes = await fetch('/api/config/emailjs');
-      if (configRes.ok) {
-        const liveConfig = await configRes.json();
-        serviceId = liveConfig.serviceId;
-        templateId = liveConfig.templateId;
-        publicKey = liveConfig.publicKey;
-        logger.info('Live EmailJS configuration fetched successfully from server.', {
-          serviceId: serviceId ? `${serviceId.slice(0, 5)}...` : 'MISSING',
-          templateId: templateId ? `${templateId.slice(0, 5)}...` : 'MISSING',
-          publicKey: publicKey ? `${publicKey.slice(0, 5)}...` : 'MISSING'
         });
-      }
-    } catch (fetchErr) {
-      logger.warn('Failed to fetch live EmailJS config from server. Falling back to local/bundled variables.', fetchErr);
-    }
 
-    // Fallback to state or bundled import.meta.env
-    if (!serviceId) serviceId = emailjsConfig.serviceId || import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
-    if (!templateId) templateId = emailjsConfig.templateId || import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
-    if (!publicKey) publicKey = emailjsConfig.publicKey || import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+        const result = await response.json();
 
-    logger.info('Evaluating final consolidated EmailJS credentials:', {
-      serviceId: serviceId ? `${serviceId.slice(0, 5)}...` : 'MISSING',
-      templateId: templateId ? `${templateId.slice(0, 5)}...` : 'MISSING',
-      publicKey: publicKey ? `${publicKey.slice(0, 5)}...` : 'MISSING'
-    });
-
-    if (!serviceId || !templateId || !publicKey) {
-      logger.error('EmailJS direct fallback aborted: Missing required credentials configuration.');
-      // If client-side backup is missing config, but server saved lead, we can at least say saved.
-      if (serverSuccess) {
-        logger.info('Completing with partial success state. Lead is stored on server, but no automatic emails were dispatched.');
-        setSubmissionResult({
-          success: true,
-          message: 'Message sent successfully!',
-          details: 'Thank you! Your message has been received and our team will get back to you shortly.',
-        });
-        setFormData({ name: '', email: '', phone: '', company: '', service: 'IT Solutions', message: '' });
-        if (onLeadAdded) onLeadAdded();
-      } else {
-        logger.error('Both server storage and EmailJS fallback failed. Informing user of total failure.');
-        setSubmissionResult({
-          success: false,
-          message: 'Submission failed.',
-          details: 'Secure server registry is offline, and browser backup EmailJS keys are not configured.',
-        });
-      }
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const templateParams = {
-        from_name: formData.name,
-        from_email: formData.email,
-        phone: formData.phone || 'N/A',
-        company: formData.company || 'N/A',
-        service_selected: formData.service,
-        message: formData.message,
-        to_email: 'admin@sunbabx-innovations.com',
-      };
-
-      logger.info('Dispatching direct payload via @emailjs/browser SDK...', templateParams);
-      const emailjsResponse = await emailjs.send(serviceId, templateId, templateParams, publicKey);
-
-      if (emailjsResponse.status === 200) {
-        logger.info('EmailJS browser direct transmission succeeded.', { response: emailjsResponse });
-
-        // If the server didn't save the lead previously, try to back it up now
-        if (!serverSuccess) {
-          logger.info('Server was previously offline. Attempting post-send backup transmission to backend registry...');
-          try {
-            const backupResponse = await fetch('/api/contact', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...formData, message: `[EmailJS Backup Dispatch] ${formData.message}` }),
-            });
-            logger.info('Server lead backup response received.', { status: backupResponse.status });
-          } catch (e: any) {
-            logger.warn('Failed to back up lead to server during post-send EmailJS fallback.', e);
-          }
+        if (!response.ok) {
+            throw new Error(result.message || "Unable to send message.");
         }
 
-        setSubmissionResult({
-          success: true,
-          message: 'Message sent successfully!',
-          details: 'Thank you! Your message has been received and our team will get back to you shortly.',
+        logger.info("Contact email sent", result);
+
+       setSubmissionResult({
+  success: true,
+  message: "Request Successfully Submitted",
+  details:
+    "Thank you for contacting SUNBABX INNOVATIONS. Your consultation request has been securely received, and a confirmation email has been sent to your inbox. Our engineering team will review your requirements and respond within one business day.",
+});
+
+        setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            company: "",
+            service: "IT Solutions",
+            message: "",
         });
-        setFormData({ name: '', email: '', phone: '', company: '', service: 'IT Solutions', message: '' });
-        if (onLeadAdded) onLeadAdded();
-      } else {
-        throw new Error(`EmailJS responded with status: ${emailjsResponse.status}`);
-      }
-    } catch (emailjsErr: any) {
-      logger.error('EmailJS direct delivery execution threw exception.', emailjsErr, { errorStack: emailjsErr?.stack });
-      if (serverSuccess) {
-        logger.warn('Inquiry was saved in server-side db, but direct EmailJS fallback also failed.');
+
+        onLeadAdded?.();
+
+    } catch (error: any) {
+
+        logger.error("Submission failed", error);
+
         setSubmissionResult({
-          success: true,
-          message: 'Message sent successfully!',
-          details: 'Thank you! Your message has been received and our team will get back to you shortly.',
-        });
-        setFormData({ name: '', email: '', phone: '', company: '', service: 'IT Solutions', message: '' });
-        if (onLeadAdded) onLeadAdded();
-      } else {
-        logger.error('Critical failure: No mechanism successfully delivered the lead.');
-        setSubmissionResult({
-          success: false,
-          message: 'Submission failed.',
-          details: 'Both secure server registration and direct EmailJS routing encountered errors. Please retry.',
-        });
-      }
+  success: false,
+  message: "Unable to Submit Request",
+  details:
+    error.message ||
+    "We couldn't send your request at this time. Please try again in a few moments.",
+});
+
     } finally {
-      setIsSubmitting(false);
+
+        setIsSubmitting(false);
+
     }
-  };
 
-  const servicesList = ['IT Solutions', 'Retail & E-Commerce', 'Value-Added Services', 'Digital Products', 'Other Inquiry'];
+};
 
+
+const servicesList = [
+  'Enterprise Software Engineering',
+  'Cybersecurity Engineering',
+  'AI Security Solutions',
+  'Fraud Detection Systems',
+  'Secure Payment Gateway Integration',
+  'Cloud Infrastructure Engineering',
+  'API Engineering',
+  'Enterprise Consultation',
+];
   return (
     <section id="contact" className="py-24 bg-[#050b1a] relative overflow-hidden">
       <div className="absolute top-1/3 left-10 w-80 h-80 rounded-full bg-blue-600/10 blur-[100px] pointer-events-none select-none" />
@@ -284,10 +201,10 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-4 select-none">
             <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-bold text-cyan-300 tracking-wider uppercase">Contact Portal</span>
+            <span className="text-xs font-bold text-cyan-300 tracking-wider uppercase">Enterprise Consultation</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-white tracking-tight mb-4">
-            Connect With Our Innovators
+            Let's Engineer Your Next Secure Solution
           </h2>
           <p className="text-sm text-white/60 font-medium leading-relaxed">
             Have an IT project, require retail consultancy, or want to integrate our value-added services? Fill out the portal inquiry and we will respond within 24 business hours.
@@ -296,104 +213,396 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Left Column - Details */}
-          <div className="lg:col-span-5 flex flex-col justify-between text-left space-y-10">
-            <div>
-              <h3 className="font-display font-bold text-2xl text-white mb-3">Company Details</h3>
-              <p className="text-sm text-white/50 font-medium leading-relaxed mb-8">
-                SUNBABX-INNOVATIONS is based in Nigeria, operating globally to deliver seamless IT, cloud infrastructure, online retail stores, and innovative digital product checkouts.
-              </p>
+          {/* Left Column */}
 
-              <div className="space-y-6">
-                <div className="flex gap-4 items-start">
-                  <div className="p-3 bg-white/5 text-cyan-400 rounded-xl shrink-0 shadow-xs border border-white/10">
-                    <Mail className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">Direct Email Integration</h4>
-                    <a href="mailto:admin@sunbabx-innovations.com" className="text-sm font-semibold text-cyan-400 hover:underline">
-                      admin@sunbabx-innovations.com
-                    </a>
-                    <p className="text-[11px] text-white/40 font-medium mt-0.5">Office 365 Outlook Mailbox</p>
-                  </div>
-                </div>
+<div className="lg:col-span-5 flex flex-col justify-between space-y-10">
 
-                <div className="flex gap-4 items-start">
-                  <div className="p-3 bg-white/5 text-orange-400 rounded-xl shrink-0 shadow-xs border border-white/10">
-                    <Phone className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">Inquiry Support Phone</h4>
-                    <a href="tel:+2349048410304" className="text-sm font-semibold text-white/80 hover:text-orange-400">
-                      +2349048410304
-                    </a>
-                    <p className="text-[11px] text-white/40 font-medium mt-0.5">Available Mon - Fri, 9am - 5pm</p>
-                  </div>
-                </div>
+  <div>
 
-                <div className="flex gap-4 items-start">
-                  <div className="p-3 bg-white/5 text-red-400 rounded-xl shrink-0 shadow-xs border border-white/10">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">Corporate HQ</h4>
-                    <p className="text-sm font-medium text-white/80">
-                      Lagos, Nigeria
-                    </p>
-                    <p className="text-[11px] text-white/40 font-medium mt-0.5">Physical & Cloud Operations</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2">
 
-            {/* Quick trust card */}
-            <div className="bg-white/4 border border-white/10 rounded-xl p-5 select-none">
-              <h4 className="font-bold text-cyan-400 text-xs uppercase tracking-wider mb-2">Our Quality Commitment</h4>
-              <p className="text-[11px] text-white/60 leading-relaxed font-medium">
-                "We bridge the gap between quality products and customers. Reliability, speed, and absolute satisfaction are our pillars. Every submission goes directly to our core review team."
-              </p>
-            </div>
-          </div>
+      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+
+      <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-300">
+        Enterprise Engineering
+      </span>
+
+    </div>
+
+    <h3 className="mt-6 text-3xl font-black text-white leading-tight">
+
+      Secure by Engineering.
+      <br />
+
+      Intelligent by Design.
+
+    </h3>
+
+    <p className="mt-6 text-white/60 leading-8">
+
+      We partner with organizations to engineer secure enterprise
+      software, modern cybersecurity platforms, fraud detection
+      systems, cloud infrastructure and AI-powered security
+      solutions.
+
+    </p>
+
+  </div>
+
+  {/* Core Expertise */}
+
+  <div className="space-y-4">
+
+    <div className="flex items-start gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+
+      <BrainCircuit className="w-6 h-6 text-cyan-400 shrink-0 mt-1" />
+
+      <div>
+
+        <h4 className="font-bold text-white">
+          Enterprise Software Engineering
+        </h4>
+
+        <p className="text-sm text-white/55 mt-1">
+          Secure business applications and enterprise platforms.
+        </p>
+
+      </div>
+
+    </div>
+
+    <div className="flex items-start gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+
+      <ShieldCheck className="w-6 h-6 text-cyan-400 shrink-0 mt-1" />
+
+      <div>
+
+        <h4 className="font-bold text-white">
+          Cybersecurity Engineering
+        </h4>
+
+        <p className="text-sm text-white/55 mt-1">
+          Security architecture, monitoring and fraud protection.
+        </p>
+
+      </div>
+
+    </div>
+
+    <div className="flex items-start gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+
+      <Cloud className="w-6 h-6 text-cyan-400 shrink-0 mt-1" />
+
+      <div>
+
+        <h4 className="font-bold text-white">
+          Cloud Infrastructure
+        </h4>
+
+        <p className="text-sm text-white/55 mt-1">
+          Secure cloud-native infrastructure and API engineering.
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  {/* Contact Details */}
+
+  <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+
+    <h4 className="text-white font-bold mb-5">
+
+      Engineering Consultation Center
+
+    </h4>
+
+    <div className="space-y-5">
+
+      <div className="flex items-center gap-4">
+
+        <Mail className="w-5 h-5 text-cyan-400" />
+
+        <div>
+
+          <p className="text-xs uppercase tracking-widest text-white/40">
+            Email
+          </p>
+
+          <p className="text-white">
+            admin@sunbabx-innovations.com
+          </p>
+
+        </div>
+
+      </div>
+
+      <div className="flex items-center gap-4">
+
+        <Phone className="w-5 h-5 text-cyan-400" />
+
+        <div>
+
+          <p className="text-xs uppercase tracking-widest text-white/40">
+            Phone
+          </p>
+
+          <p className="text-white">
+            +234 904 841 0304
+          </p>
+
+        </div>
+
+      </div>
+
+      <div className="flex items-center gap-4">
+
+        <MapPin className="w-5 h-5 text-cyan-400" />
+
+        <div>
+
+          <p className="text-xs uppercase tracking-widest text-white/40">
+            Global Operations
+          </p>
+
+          <p className="text-white">
+            Lagos, Nigeria
+          </p>
+          <p className="text-xs text-cyan-300 mt-2">
+  Average response time: Less than 24 business hours
+</p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+{/* Left Column */}
+
+<div className="lg:col-span-5 flex flex-col justify-between">
+
+  <div>
+
+    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2">
+
+      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+
+      <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-300">
+        Enterprise Engineering
+      </span>
+
+    </div>
+
+    <h3 className="mt-6 text-4xl font-black leading-tight text-white">
+
+      Secure by Engineering.
+
+      <br />
+
+      Intelligent by Design.
+
+    </h3>
+
+    <p className="mt-6 text-white/60 leading-8">
+
+      We engineer secure enterprise software, AI-powered cybersecurity,
+      fraud detection platforms, cloud infrastructure and resilient
+      digital solutions that help organizations innovate with confidence.
+
+    </p>
+
+  </div>
+
+  <div className="mt-10 space-y-5">
+
+    {/* Card 1 */}
+
+    <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-5">
+
+      <div className="flex gap-4">
+
+        <ShieldCheck className="w-8 h-8 text-cyan-400 shrink-0" />
+
+        <div>
+
+          <h4 className="font-bold text-white">
+
+            Cybersecurity Engineering
+
+          </h4>
+
+          <p className="mt-2 text-sm text-white/60 leading-6">
+
+            Secure architectures, threat protection,
+            fraud detection and enterprise resilience.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {/* Card 2 */}
+
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+
+      <div className="flex gap-4">
+
+        <BrainCircuit className="w-8 h-8 text-cyan-400 shrink-0" />
+
+        <div>
+
+          <h4 className="font-bold text-white">
+
+            AI Security Solutions
+
+          </h4>
+
+          <p className="mt-2 text-sm text-white/60 leading-6">
+
+            Intelligent monitoring,
+            anomaly detection and automated protection.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {/* Card 3 */}
+
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+
+      <div className="flex gap-4">
+
+        <Cloud className="w-8 h-8 text-cyan-400 shrink-0" />
+
+        <div>
+
+          <h4 className="font-bold text-white">
+
+            Cloud Infrastructure
+
+          </h4>
+
+          <p className="mt-2 text-sm text-white/60 leading-6">
+
+            Secure Azure-ready cloud infrastructure,
+            APIs and enterprise deployments.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {/* Card 4 */}
+
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+
+      <div className="flex gap-4">
+
+        <Mail className="w-8 h-8 text-cyan-400 shrink-0" />
+
+        <div>
+
+          <h4 className="font-bold text-white">
+
+            Engineering Consultation
+
+          </h4>
+
+          <p className="mt-2 text-sm text-white/60 leading-6">
+
+            Every consultation is reviewed directly by our
+            engineering team.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  {/* Bottom Trust Banner */}
+
+  <div className="mt-10 rounded-2xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 p-6">
+
+    <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-300">
+
+      Enterprise Promise
+
+    </p>
+
+    <h4 className="mt-3 text-2xl font-black text-white">
+
+      Security First.
+
+      <br />
+
+      Engineering Always.
+
+    </h4>
+
+    <p className="mt-4 text-sm leading-7 text-white/60">
+
+      Every project is engineered with security,
+      scalability and long-term maintainability
+      at its core.
+
+    </p>
+
+  </div>
+
+</div>
 
           {/* Right Column - Contact Form Box */}
-          <div className="lg:col-span-7">
-            <div className="bg-white/4 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
-              
-              <div className="border-b border-white/10 pb-4 mb-6">
-                <h4 className="font-display font-bold text-white text-lg text-left">Inquiry Details</h4>
-                <p className="text-xs text-white/40 font-medium mt-1 text-left">Specify your interest and submit securely to our review panel.</p>
-              </div>
+         {/* Right Column */}
 
-              {/* Status Alert */}
-              <AnimatePresence mode="wait">
-                {submissionResult && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className={`p-4 rounded-xl mb-6 text-left border ${
-                      submissionResult.success
-                        ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
-                        : 'bg-red-950/40 text-red-300 border-red-500/30'
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      {submissionResult.success ? (
-                        <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                      )}
-                      <div>
-                        <h5 className="font-bold text-sm leading-snug">{submissionResult.message}</h5>
-                        {submissionResult.details && (
-                          <p className="text-xs font-medium opacity-90 mt-1 leading-relaxed">
-                            {submissionResult.details}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+<div className="lg:col-span-7">
+
+  <div className="bg-white/4 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+
+    <div className="border-b border-white/10 pb-6 mb-8">
+
+      <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 px-3 py-1">
+
+        <Sparkles className="w-4 h-4 text-cyan-400" />
+
+        <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-cyan-300">
+          Enterprise Consultation
+        </span>
+
+      </span>
+
+      <h3 className="mt-5 text-3xl font-black text-white">
+        Tell Us About Your Project
+      </h3>
+
+      <p className="mt-3 text-white/55 leading-7">
+       Complete the consultation request below. Every submission is securely
+processed through our Microsoft 365 infrastructure and delivered directly
+to our engineering team. An acknowledgement email will be sent to you
+immediately, followed by a detailed response from one of our engineers.
+      </p>
+
+    </div>
 
 
 
@@ -528,16 +737,16 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
                   }`}
                 >
                   {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing Submission...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Dispatch Inquiry to admin@sunbabx-innovations.com
-                    </>
-                  )}
+  <>
+    <Loader2 className="w-5 h-5 animate-spin" />
+    Sending Secure Request...
+  </>
+) : (
+  <>
+    <Send className="w-4 h-4" />
+    Submit Secure Consultation Request
+  </>
+)}
                 </button>
               </form>
 

@@ -49,7 +49,7 @@ export default function Navbar() {
             </span>
             <span className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors">
               <Phone className="w-3.5 h-3.5 text-cyan-400" />
-              <a href="tel:+2349048410304">+2349048410304</a>
+              <a href="tel:+2348169036052">+2348169036052</a>
             </span>
           </div>
           <div className="flex items-center gap-4 text-[11px] opacity-70 tracking-wider">
