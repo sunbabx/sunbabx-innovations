@@ -50,16 +50,85 @@ const logger = {
   }
 };
 
+const countryCodes = [
+  { country: 'Nigeria', code: '+234' },
+  { country: 'United Kingdom', code: '+44' },
+  { country: 'United States', code: '+1' },
+  { country: 'Canada', code: '+1' },
+
+  { country: 'Ghana', code: '+233' },
+  { country: 'South Africa', code: '+27' },
+  { country: 'Kenya', code: '+254' },
+  { country: 'Uganda', code: '+256' },
+  { country: 'Tanzania', code: '+255' },
+  { country: 'Rwanda', code: '+250' },
+  { country: 'Ethiopia', code: '+251' },
+  { country: 'Egypt', code: '+20' },
+  { country: 'Cameroon', code: '+237' },
+  { country: 'Côte d’Ivoire', code: '+225' },
+  { country: 'Senegal', code: '+221' },
+  { country: 'Zambia', code: '+260' },
+  { country: 'Zimbabwe', code: '+263' },
+  { country: 'Botswana', code: '+267' },
+  { country: 'Namibia', code: '+264' },
+  { country: 'Sierra Leone', code: '+232' },
+  { country: 'Liberia', code: '+231' },
+  { country: 'Gambia', code: '+220' },
+  { country: 'Togo', code: '+228' },
+  { country: 'Benin', code: '+229' },
+  { country: 'Burkina Faso', code: '+226' },
+  { country: 'Guinea', code: '+224' },
+  { country: 'Mali', code: '+223' },
+  { country: 'Niger', code: '+227' },
+  { country: 'DR Congo', code: '+243' },
+  { country: 'Republic of the Congo', code: '+242' },
+  { country: 'Angola', code: '+244' },
+  { country: 'Mozambique', code: '+258' },
+  { country: 'Mauritius', code: '+230' },
+
+  { country: 'Australia', code: '+61' },
+  { country: 'New Zealand', code: '+64' },
+  { country: 'India', code: '+91' },
+  { country: 'China', code: '+86' },
+  { country: 'Japan', code: '+81' },
+  { country: 'South Korea', code: '+82' },
+  { country: 'Singapore', code: '+65' },
+
+  { country: 'United Arab Emirates', code: '+971' },
+  { country: 'Saudi Arabia', code: '+966' },
+  { country: 'Qatar', code: '+974' },
+
+  { country: 'Germany', code: '+49' },
+  { country: 'France', code: '+33' },
+  { country: 'Italy', code: '+39' },
+  { country: 'Spain', code: '+34' },
+  { country: 'Netherlands', code: '+31' },
+  { country: 'Switzerland', code: '+41' },
+  { country: 'Sweden', code: '+46' },
+  { country: 'Norway', code: '+47' },
+  { country: 'Denmark', code: '+45' },
+  { country: 'Ireland', code: '+353' },
+  { country: 'Portugal', code: '+351' },
+  { country: 'Belgium', code: '+32' },
+  { country: 'Austria', code: '+43' },
+
+  { country: 'Brazil', code: '+55' },
+  { country: 'Mexico', code: '+52' },
+  { country: 'Argentina', code: '+54' },
+];
+
 export default function ContactForm({ onLeadAdded }: ContactFormProps) {
+  const [successMessage, setSuccessMessage] = useState("");
   // Form Fields state
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
-    service: 'IT Solutions',
-    message: '',
-  });
+const [formData, setFormData] = useState({
+  name: '',
+  email: '',
+  countryCode: '+234',
+  phone: '',
+  company: '',
+  service: 'IT Solutions',
+  message: '',
+});
 
   // Client-side validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -106,79 +175,105 @@ export default function ContactForm({ onLeadAdded }: ContactFormProps) {
   };
 
 const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
+  e: React.FormEvent<HTMLFormElement>
 ) => {
+  e.preventDefault();
 
-    e.preventDefault();
+  logger.info("Submitting contact form", formData);
 
-    logger.info("Submitting contact form", formData);
+  if (!validate()) {
+    logger.warn("Validation failed");
+    return;
+  }
 
-    if (!validate()) {
-        logger.warn("Validation failed");
-        return;
+  setIsSubmitting(true);
+  setSubmissionResult(null);
+  setSuccessMessage("");
+
+  const controller = new AbortController();
+
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, 20000);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/contact`, {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      signal: controller.signal,
+
+      body: JSON.stringify({
+        ...formData,
+
+        phone: formData.phone.trim()
+          ? `${formData.countryCode} ${formData.phone.trim()}`
+          : "",
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.message || "Unable to send message."
+      );
     }
 
-    setIsSubmitting(true);
-    setSubmissionResult(null);
+    logger.info("Contact email sent", result);
 
-    try {
+    setSuccessMessage("Success");
 
-        const response = await fetch(`${API_BASE_URL}/api/contact`, {
+    window.setTimeout(() => {
+      setSuccessMessage("");
+    }, 4000);
 
-            method: "POST",
+    setSubmissionResult({
+      success: true,
+      message: "Request Successfully Submitted",
+      details:
+        "Thank you for contacting SUNBABX INNOVATIONS. Your consultation request has been securely received, and a confirmation email has been sent to your inbox. Our engineering team will review your requirements and respond within one business day.",
+    });
 
-            headers: {
-                "Content-Type": "application/json",
-            },
+    setFormData({
+      name: "",
+      email: "",
+      countryCode: "+234",
+      phone: "",
+      company: "",
+      service: "IT Solutions",
+      message: "",
+    });
 
-            body: JSON.stringify(formData),
+    onLeadAdded?.();
 
-        });
+  } catch (err: any) {
+    logger.error("Contact form submission failed", err);
 
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.message || "Unable to send message.");
-        }
-
-        logger.info("Contact email sent", result);
-
-       setSubmissionResult({
-  success: true,
-  message: "Request Successfully Submitted",
-  details:
-    "Thank you for contacting SUNBABX INNOVATIONS. Your consultation request has been securely received, and a confirmation email has been sent to your inbox. Our engineering team will review your requirements and respond within one business day.",
-});
-
-        setFormData({
-            name: "",
-            email: "",
-            phone: "",
-            company: "",
-            service: "IT Solutions",
-            message: "",
-        });
-
-        onLeadAdded?.();
-
-    } catch (error: any) {
-
-        logger.error("Submission failed", error);
-
-        setSubmissionResult({
-  success: false,
-  message: "Unable to Submit Request",
-  details:
-    error.message ||
-    "We couldn't send your request at this time. Please try again in a few moments.",
-});
-
-    } finally {
-
-        setIsSubmitting(false);
-
+    if (err?.name === "AbortError") {
+      setSubmissionResult({
+        success: false,
+        message: "Request Timed Out",
+        details:
+          "The request took too long to complete. Please try again. Your information has not been cleared.",
+      });
+    } else {
+      setSubmissionResult({
+        success: false,
+        message: "Unable to Submit Request",
+        details:
+          err?.message ||
+          "We were unable to process your request. Please try again.",
+      });
     }
 
+  } finally {
+    window.clearTimeout(timeoutId);
+    setIsSubmitting(false);
+  }
 };
 
 
@@ -652,29 +747,64 @@ immediately, followed by a detailed response from one of our engineers.
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Phone field */}
-                  <div className="text-left">
-                    <label className="block text-xs font-bold text-white/70 mb-1.5 uppercase tracking-wide">
-                      Phone Number (Optional)
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="e.g. +234 803 123 4567"
-                      className={`w-full p-3 rounded-xl bg-white/5 border text-sm font-semibold text-white placeholder:text-white/20 focus:outline-hidden focus:ring-2 ${
-                        errors.phone
-                          ? 'border-red-400 focus:ring-red-500/20 text-red-300'
-                          : 'border-white/10 focus:ring-cyan-500/20 focus:border-cyan-500'
-                      }`}
-                    />
-                    {errors.phone && <p className="text-red-400 text-[11px] font-bold mt-1">{errors.phone}</p>}
-                  </div>
+                  {/* Phone field */}
+<div className="text-left">
+  <label className="block text-xs font-bold text-white/70 mb-1.5 uppercase tracking-wide">
+    Phone Number 
+  </label>
+
+  <div className="flex gap-2">
+    {/* Country Code */}
+    <select
+      name="countryCode"
+      value={formData.countryCode}
+      onChange={handleInputChange}
+      aria-label="Country calling code"
+      className="w-[145px] shrink-0 p-3 rounded-xl bg-[#050b1a] border border-white/10 text-white text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+    >
+      {countryCodes.map((item) => (
+        <option
+          key={`${item.country}-${item.code}`}
+          value={item.code}
+          className="bg-[#050b1a] text-white"
+        >
+          {item.country} ({item.code})
+        </option>
+      ))}
+    </select>
+
+    {/* Phone Number */}
+    <input
+      type="tel"
+      name="phone"
+      value={formData.phone}
+      onChange={handleInputChange}
+      placeholder="803 123 4567"
+      inputMode="tel"
+      autoComplete="tel"
+      className={`min-w-0 flex-1 p-3 rounded-xl bg-white/5 border text-sm font-semibold text-white placeholder:text-white/20 focus:outline-hidden focus:ring-2 ${
+        errors.phone
+          ? 'border-red-400 focus:ring-red-500/20 text-red-300'
+          : 'border-white/10 focus:ring-cyan-500/20 focus:border-cyan-500'
+      }`}
+    />
+  </div>
+
+  <p className="text-[10px] text-white/30 mt-1.5">
+    Select your country and enter your local phone number.
+  </p>
+
+  {errors.phone && (
+    <p className="text-red-400 text-[11px] font-bold mt-1">
+      {errors.phone}
+    </p>
+  )}
+</div>
 
                   {/* Company field */}
                   <div className="text-left">
                     <label className="block text-xs font-bold text-white/70 mb-1.5 uppercase tracking-wide">
-                      Company Name (Optional)
+                      Company Name 
                     </label>
                     <input
                       type="text"
@@ -747,7 +877,16 @@ immediately, followed by a detailed response from one of our engineers.
     Submit Secure Consultation Request
   </>
 )}
+
+
                 </button>
+                                {successMessage && (
+  <div className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-center">
+    <p className="text-sm font-bold text-emerald-400">
+      Success
+    </p>
+  </div>
+)}
               </form>
 
             </div>
